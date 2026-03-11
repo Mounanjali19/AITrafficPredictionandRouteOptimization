@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <script src="/static/js/map.js" defer></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>TrafficAI</title>
+
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <script src="/static/js/app.js" defer></script>
+</head>
+
+<body data-theme="dark">
+
+<!-- NAVBAR -->
+<header class="top-nav">
+    <div class="logo">Traffic<span>AI</span></div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/predict">Predictions</a>
+        <a href="/map">Map</a>
+        <a href="/upload">YOLO Detect</a>
+        <a href="/influence">Influence</a>
+    </nav>
+
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+</header>
+
+<!-- MAIN CONTENT -->
+<main>
+    {% block content %}
+    {% endblock %}
+</main>
+
+<footer class="footer">
+    TrafficAI © 2025
+</footer>
+
+</body>
+</html>

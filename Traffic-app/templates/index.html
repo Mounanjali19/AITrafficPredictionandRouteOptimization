@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TrafficAI · Dashboard</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/app.js" defer></script>
+</head>
+<body data-theme="dark">
+
+<header class="top-nav">
+    <div class="logo">Traffic<span>AI</span></div>
+    <nav>
+        <a href="/" class="active">Home</a>
+        <a href="/predict">Predictions</a>
+        <a href="/map">Map</a>
+        <a href="/upload">YOLO Detect</a>
+        
+    </nav>
+    <button id="themeToggle" class="theme-toggle">🌙</button>
+</header>
+
+<main class="container">
+    <section class="hero">
+        <div>
+            <h1>Traffic Prediction & Route Intelligence</h1>
+            <p>Predict road speeds, visualize GAT attention, detect vehicles, and generate smart route maps.</p>
+            <div class="hero-buttons">
+                <a href="/predict" class="btn primary">Start Predicting</a>
+                <a href="/map" class="btn secondary">View Map</a>
+            </div>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card"><h3>LSTM</h3><p>Single-road prediction</p></div>
+            <div class="stat-card"><h3>Hybrid</h3><p>30-road GAT-LSTM</p></div>
+            <div class="stat-card"><h3>PPO</h3><p>Route optimization</p></div>
+            <div class="stat-card"><h3>YOLOv8</h3><p>Vehicle detection</p></div>
+        </div>
+    </section>
+</main>
+
+<footer class="footer">
+    <p>TrafficAI © 2025</p>
+</footer>
+
+</body>
+</html>

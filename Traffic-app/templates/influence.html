@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TrafficAI · GAT Influence</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/app.js" defer></script>
+    <script src="/static/js/influence.js" defer></script>
+</head>
+
+<body data-theme="dark">
+
+<header class="top-nav">
+    <div class="logo">Traffic<span>AI</span></div>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/predict">Predictions</a>
+        <a href="/map">Map</a>
+        <a href="/upload">YOLO Detect</a>
+        <a href="/influence" class="active">Influence</a>
+    </nav>
+    <button id="themeToggle" class="theme-toggle">🌙</button>
+</header>
+
+<main class="container">
+    <section class="card">
+        <h2>GAT Attention Heatmap</h2>
+        <button id="loadInfluence" class="btn primary">Load Influence Matrix</button>
+
+        <pre id="influenceStatus" class="result-box"></pre>
+
+        <div id="heatmapContainer" class="heatmap"></div>
+    </section>
+</main>
+
+<footer class="footer">
+    <p>TrafficAI © 2025</p>
+</footer>
+
+</body>
+</html>

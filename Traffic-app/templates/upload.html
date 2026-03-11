@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TrafficAI · YOLO Detection</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/app.js" defer></script>
+    <script src="/static/js/upload.js" defer></script>
+</head>
+
+<body data-theme="dark">
+
+<header class="top-nav">
+    <div class="logo">Traffic<span>AI</span></div>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/predict">Predictions</a>
+        <a href="/map">Map</a>
+        <a href="/upload" class="active">YOLO Detect</a>
+        <a href="/influence">Influence</a>
+    </nav>
+    <button id="themeToggle" class="theme-toggle">🌙</button>
+</header>
+
+<main class="container">
+    <section class="card">
+        <h2>Upload Image for YOLOv8 Detection</h2>
+
+        <form id="uploadForm" class="form-grid">
+            <input type="file" id="uploadImage" accept="image/*" required>
+            <button class="btn primary" type="submit">Detect</button>
+        </form>
+
+        <pre id="uploadResult" class="result-box"></pre>
+
+        <div class="img-preview-wrapper">
+            <img id="previewOriginal" class="preview-img">
+            <img id="previewDetected" class="preview-img">
+        </div>
+    </section>
+</main>
+
+<footer class="footer">
+    <p>TrafficAI © 2025</p>
+</footer>
+
+</body>
+</html>
