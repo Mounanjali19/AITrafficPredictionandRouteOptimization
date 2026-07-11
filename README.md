@@ -1,196 +1,363 @@
-AI Traffic Prediction & Route Optimization System
+# 🚦 AI Traffic Prediction & Adaptive Route Optimization
 
-Overview
+> **A Hybrid Deep Learning Framework for Predictive Traffic Congestion Management and Adaptive Route Optimization using LSTM, Graph Attention Networks (GAT), YOLOv8, and Proximal Policy Optimization (PPO).**
 
-This project implements a hybrid deep learning and reinforcement learning framework for real-time traffic congestion prediction and intelligent route optimization.
+---
+
+## 📖 Overview
 
-The system integrates:
+Traffic congestion remains one of the biggest challenges in modern urban transportation systems, leading to increased travel time, fuel consumption, environmental pollution, and economic losses. Traditional navigation systems primarily rely on current traffic conditions, making them reactive rather than predictive.
 
-LSTM (Long Short-Term Memory) for learning temporal traffic patterns
+This project presents a **hybrid Artificial Intelligence framework** that combines **spatio-temporal traffic prediction** with **adaptive route optimization** to proactively manage urban traffic. The framework predicts future congestion using deep learning and dynamically recommends optimal routes using reinforcement learning.
 
-Graph Attention Networks (GAT) for modeling spatial relationships between connected roads
+The proposed system integrates:
 
-PPO Reinforcement Learning to select optimal routes based on predicted congestion
+- 🧠 Long Short-Term Memory (LSTM) for temporal traffic forecasting
+- 🌐 Graph Attention Networks (GAT) for learning spatial road dependencies
+- 🚗 YOLOv8 for vehicle detection and traffic density estimation
+- 🎯 Proximal Policy Optimization (PPO) for adaptive route optimization
 
-The framework was tested on traffic data from Electronic City, Bengaluru, one of the most congested road networks in the city. The system predicts congestion and dynamically recommends faster routes to reduce travel time. 
+The framework was developed and evaluated on the **Electronic City road network in Bengaluru**, consisting of **250 road intersections** and **598 road segments**, with traffic simulated over **60 days at 5-minute intervals**.
 
+---
 
-Key Features
+# ✨ Features
 
-Hybrid LSTM + GAT deep learning model for spatio-temporal traffic prediction
+- Hybrid LSTM-GAT traffic prediction model
+- Spatio-temporal traffic forecasting
+- Real-time vehicle detection using YOLOv8
+- Adaptive route optimization using PPO Reinforcement Learning
+- Dynamic congestion-aware routing
+- Interactive traffic visualization dashboard
+- Flask REST API backend
+- Intelligent route recommendation
+- Modular and scalable architecture
 
-YOLOv8 vehicle detection from CCTV feeds to estimate traffic density
+---
 
-Reinforcement learning (PPO) for adaptive route selection
+# 🏗️ System Architecture
 
-Flask REST API backend for model integration
+```
+                     Historical Traffic Data
+                               │
+                               ▼
+                    Data Acquisition & Preprocessing
+                               │
+              ┌────────────────┴────────────────┐
+              ▼                                 ▼
+      LSTM Network                    YOLOv8 Vehicle Detection
+ (Temporal Feature Learning)         (Traffic Density Estimation)
+              │
+              ▼
+      Graph Attention Network
+   (Spatial Dependency Learning)
+              │
+              ▼
+     Predicted Traffic Speeds
+              │
+      Dynamic Edge Weight Update
+              │
+              ▼
+ PPO Reinforcement Learning Agent
+              │
+              ▼
+   Optimal Route Recommendation
+              │
+              ▼
+      Interactive Web Dashboard
+```
 
-Interactive web interface built using HTML, CSS, and JavaScript
+---
 
-Real-time congestion visualization and route recommendation
+# 🧠 Methodology
 
-System Architecture
+## 1. Data Acquisition
 
-The system consists of five major components:
+The road network was extracted from **OpenStreetMap (OSM)** using the **OSMnx** library.
 
-1. Data Collection
+### Dataset
 
-Traffic data was collected for 60 days at 5-minute intervals from the Electronic City road network.
+- 📍 Location: Electronic City, Bengaluru
+- 🛣️ 250 Nodes
+- 🛣️ 598 Road Segments
+- 📅 60 Days of Traffic Data
+- ⏱️ 5-Minute Sampling Interval
+- 📊 Over 10 Million Traffic Observations
 
-The road network was extracted using OSMnx, creating a graph where:
+Traffic features include:
 
-Nodes represent intersections
+- Vehicle speed
+- Traffic flow
+- Congestion level
+- Weather conditions
+- Vehicle density
 
-Edges represent road segments. 
+---
 
+## 2. Data Preprocessing
 
+Before training, the collected data undergoes:
 
-2. Vehicle Detection
+- Missing value handling
+- Outlier interpolation
+- Time synchronization
+- Min-Max Normalization
+- Graph index mapping
+- Feature engineering
 
-Traffic density is estimated using YOLOv8 object detection, which detects:
+---
 
-cars
+## 3. Traffic Prediction
 
-buses
+The prediction module combines temporal and spatial learning.
 
-trucks
+### LSTM
 
-two-wheelers
+The LSTM network learns:
 
-Vehicle counts are used as features for congestion prediction.
+- Historical traffic flow
+- Time-dependent congestion patterns
+- Long-term temporal dependencies
 
-3. Traffic Prediction
+### Graph Attention Network (GAT)
 
-The system predicts future congestion using a hybrid deep learning model:
+The GAT model captures:
 
-LSTM captures temporal patterns in traffic flow
+- Spatial road connectivity
+- Congestion propagation
+- Neighboring road influence
+- Graph-based traffic relationships
 
-Graph Attention Network (GAT) captures spatial dependencies between connected roads
+The temporal and spatial representations are fused to predict future traffic conditions.
 
-This allows the model to understand both time-based patterns and road network relationships.
+---
 
-4. Route Optimization
+## 4. Vehicle Detection
 
-A Proximal Policy Optimization (PPO) reinforcement learning agent learns optimal routes.
+YOLOv8 processes CCTV footage to estimate traffic density by detecting:
 
-The reward function balances:
+- Cars
+- Buses
+- Trucks
+- Motorcycles
 
-vehicle speed
+Vehicle counts are incorporated as additional features for congestion prediction.
 
-congestion level
+---
 
-travel delay
+## 5. Adaptive Route Optimization
 
-This allows the agent to select less congested and faster routes dynamically. 
+Predicted traffic speeds are converted into dynamic edge weights within the road network graph.
 
+A **Proximal Policy Optimization (PPO)** agent continuously learns the optimal routing policy by minimizing:
 
+- Travel time
+- Traffic congestion
+- Route delay
 
-5. Visualization Interface
+Unlike conventional shortest-path algorithms, PPO adapts to changing traffic conditions in real time.
 
-A lightweight web frontend was built using:
+---
 
-HTML
+# 💻 Technology Stack
 
-CSS
+## Programming Languages
 
-JavaScript
+- Python
+- HTML
+- CSS
+- JavaScript
 
-The interface displays:
+## Machine Learning & Deep Learning
 
-predicted traffic speed
+- PyTorch
+- LSTM
+- Graph Attention Networks (GAT)
 
-congestion levels
+## Computer Vision
 
-recommended routes
+- YOLOv8
+- OpenCV
 
-A color-coded system indicates traffic status:
+## Reinforcement Learning
 
-🟥 Red → Heavy congestion
+- Stable-Baselines3
+- Proximal Policy Optimization (PPO)
 
-🟨 Yellow → Moderate traffic
+## Data Processing
 
-🟩 Green → Smooth flow. 
+- NumPy
+- Pandas
 
+## Graph Processing
 
+- OSMnx
+- NetworkX
 
-Tech Stack
-Programming
+## Backend
 
-Python
+- Flask REST API
 
-Deep Learning
+## Frontend
 
-PyTorch
+- HTML
+- CSS
+- JavaScript
 
-LSTM
+---
 
-Graph Attention Networks
+# 📊 Experimental Results
 
-Computer Vision
+## Traffic Prediction Performance
 
-YOLOv8
+| Model | MAE | RMSE | R² Score |
+|------|------:|------:|------:|
+| LSTM | 0.5354 | 0.7880 | 0.9766 |
+| Hybrid LSTM-GAT | 1.3447 | 2.0056 | 0.9309 |
 
-Reinforcement Learning
+Although the standalone LSTM achieved lower numerical prediction error, the Hybrid LSTM-GAT model effectively captures **spatial traffic dependencies**, enabling more informed routing decisions and improved congestion management.
 
-PPO (Stable-Baselines3)
+---
 
-Backend
+## Adaptive Routing Performance
 
-Flask REST API
+Compared with the traditional **Dijkstra shortest-path algorithm**, the PPO-based routing agent achieved:
 
-Frontend
+- 🚀 **10–25% reduction in travel time**
+- 🚦 Better congestion avoidance
+- 🔄 Dynamic route adaptation
+- 📈 Improved traffic distribution
 
-HTML
+---
 
-CSS
+# 🌍 Case Study
 
-JavaScript
+The framework was evaluated using the **Electronic City road network in Bengaluru**, a densely populated urban region with highly dynamic traffic conditions.
 
-Data Processing
+### Road Network Statistics
 
-Pandas
+| Parameter | Value |
+|------------|-------|
+| Nodes | 250 |
+| Road Segments | 598 |
+| Duration | 60 Days |
+| Sampling Interval | 5 Minutes |
+| Traffic Samples | 10+ Million |
 
-NumPy
+---
 
-OSMnx
+# 📸 Project Demonstration
 
-Results
+The project includes:
 
-The model achieved strong performance in predicting traffic congestion.
+- 🚦 Traffic Prediction Dashboard
+- 🛣️ Route Recommendation Interface
+- 🌐 Road Network Visualization
+- 📊 Traffic Prediction Graphs
+- 🔥 GAT Attention Heatmap
+- 🚗 YOLOv8 Vehicle Detection
 
-Model	MAE	RMSE	R²
-LSTM	0.535	0.788	0.976
-GAT-LSTM	1.344	2.005	0.930
+*(Screenshots can be added in the `/assets` folder.)*
 
-Integrating YOLO vehicle detection improved responsiveness during sudden congestion spikes. 
+---
 
+# 🚀 Getting Started
 
-How to Run
+## Clone the Repository
 
-Clone the repository
+```bash
+git clone https://github.com/Mounanjali19/AITrafficPredictionandRouteOptimization.git
+```
 
-git clone https://github.com/Mounanjali19/AITrafficPredictionandRouteOptimization
+## Navigate to the Project
 
-Install dependencies
+```bash
+cd AITrafficPredictionandRouteOptimization
+```
 
+## Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-Run congestion prediction
+## Run Traffic Prediction
 
+```bash
 python congestion_prediction.py
+```
 
-Run route optimization
+## Run Route Optimization
 
+```bash
 python route_opt_tester.py
+```
 
-Future Improvements
+## Start the Flask Server
 
-Integration with live traffic APIs
+```bash
+python app.py
+```
 
-Deployment on cloud platforms
+Open your browser and visit:
 
-Edge deployment using Jetson Nano
+```
+http://127.0.0.1:5000
+```
 
-Multi-camera traffic monitoring
+---
 
-Smart traffic signal optimization. 
+# 📂 Project Structure
+
+```
+AITrafficPredictionandRouteOptimization
+│
+├── Traffic-app/
+├── models/
+├── dataset/
+├── static/
+├── templates/
+├── congestion_prediction.py
+├── route_opt_tester.py
+├── app.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+# 🎯 Motivation
+
+Conventional navigation systems react only to existing traffic conditions and often fail to anticipate future congestion.
+
+This project bridges the gap between **traffic prediction** and **routing decisions** by integrating deep learning with reinforcement learning into a unified framework. By predicting congestion before it occurs and incorporating those predictions into route planning, the system enables proactive traffic management and more efficient urban mobility.
+
+---
+
+# 🔮 Future Work
+
+- Integration with live traffic APIs
+- Deployment on AWS or Azure Cloud
+- Multi-camera traffic monitoring
+- Smart traffic signal optimization
+- Edge deployment using NVIDIA Jetson
+- Fuel-efficient route optimization
+- Multi-modal transportation support
+- Large-scale metropolitan deployment
+
+---
+
+
+# 🤝 Contributing
+
+Contributions, suggestions, and improvements are welcome.
+
+Feel free to fork the repository, open issues, or submit pull requests.
+
+---
+
+# ⭐ Support
+
+If you found this project useful or interesting, consider giving the repository a **⭐ Star**.
+
+It helps others discover the project and supports future development.
