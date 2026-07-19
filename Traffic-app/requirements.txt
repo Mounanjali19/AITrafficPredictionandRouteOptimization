@@ -2,4 +2,8 @@ flask
 gunicorn
 numpy
 pandas
+torch
+torch-geometric
+ultralytics
 folium
+stable-baselines3
