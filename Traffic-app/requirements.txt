@@ -6,4 +6,4 @@ torch
 torch-geometric
 ultralytics
 folium
-stable-baselines3
+
