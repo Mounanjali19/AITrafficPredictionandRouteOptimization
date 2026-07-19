@@ -2,6 +2,10 @@
 
 > **A Hybrid Deep Learning Framework for Predictive Traffic Congestion Management and Adaptive Route Optimization using LSTM, Graph Attention Networks (GAT), YOLOv8, and Proximal Policy Optimization (PPO).**
 
+### 🌐 Live Demo
+
+🚀 **Try the deployed application:** [AI Traffic Prediction & Route Optimization](https://aitrafficpredictionandrouteoptimization.onrender.com)
+
 ---
 
 ## 📖 Overview
