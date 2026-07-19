@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 flask
 gunicorn
 numpy
@@ -6,4 +8,3 @@ torch
 torch-geometric
 ultralytics
 folium
-
