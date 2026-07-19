@@ -1,15 +1,12 @@
 import os
-import torch
+import hashlib
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import folium
 
 from flask import Flask, render_template, request, jsonify
-from datetime import datetime
-
-from utils.preprocess import generate_traffic_sequence
-from utils.graph_utils import build_edge_index
-from utils.hybrid_model import HybridGAT_LSTM
 
 
 # ======================================================
@@ -20,25 +17,11 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-HYBRID_PATH = os.path.join(
-    BASE_DIR,
-    "models",
-    "hybrid_model_final.pt"
-)
-
-YOLO_PATH = os.path.join(
-    BASE_DIR,
-    "models",
-    "yolov8n.pt"
-)
-
 EDGE_FILE = os.path.join(
     BASE_DIR,
     "data",
     "ecity_edges.csv"
 )
-
-device = "cpu"
 
 
 # ======================================================
@@ -48,75 +31,6 @@ device = "cpu"
 last_hybrid_prediction = None
 last_hybrid_meta = None
 
-# YOLO is NOT loaded during server startup.
-yolo_model = None
-
-
-# ======================================================
-# LOAD HYBRID MODEL
-# ======================================================
-
-try:
-
-    hybrid_model = HybridGAT_LSTM(
-        in_dim=8,
-        gat_hidden=64,
-        gat_heads=4,
-        lstm_hidden=128,
-        fusion_hidden=128
-    ).to(device)
-
-    hybrid_model.load_state_dict(
-        torch.load(
-            HYBRID_PATH,
-            map_location=device
-        ),
-        strict=True
-    )
-
-    hybrid_model.eval()
-
-    print("Hybrid GAT-LSTM model loaded successfully.")
-
-except Exception as e:
-
-    print(
-        "Error loading Hybrid model:",
-        e
-    )
-
-    hybrid_model = None
-
-
-# ======================================================
-# LOAD EDGE INDEX
-# ======================================================
-
-try:
-
-    SEL_EDGES, EDGE_ID_MAP, EDGE_INDEX = build_edge_index(
-        EDGE_FILE
-    )
-
-    print(
-        "Edge index loaded successfully.",
-        "Number of edges:",
-        len(SEL_EDGES)
-        if SEL_EDGES is not None
-        else "None"
-    )
-
-except Exception as e:
-
-    print(
-        "Error loading edge index:",
-        e
-    )
-
-    SEL_EDGES = None
-    EDGE_ID_MAP = None
-    EDGE_INDEX = None
-
 
 # ======================================================
 # FRONTEND ROUTES
@@ -124,85 +38,219 @@ except Exception as e:
 
 @app.route("/")
 def home():
-
-    return render_template(
-        "index.html"
-    )
+    return render_template("index.html")
 
 
 @app.route("/predict")
 def predict_page():
-
-    return render_template(
-        "predict.html"
-    )
+    return render_template("predict.html")
 
 
 @app.route("/map")
 def map_page():
-
-    return render_template(
-        "map.html"
-    )
+    return render_template("map.html")
 
 
 @app.route("/upload")
 def upload_page():
-
-    return render_template(
-        "upload.html"
-    )
+    return render_template("upload.html")
 
 
 @app.route("/influence")
 def influence_page():
-
-    return render_template(
-        "influence.html"
-    )
+    return render_template("influence.html")
 
 
 # ======================================================
 # TIMESTAMP HELPER
 # ======================================================
 
-def make_timestamp(
-    date_str,
-    time_str
-):
+def make_timestamp(date_str, time_str):
 
-    if date_str is None:
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
 
-        date_str = datetime.now().strftime(
-            "%Y-%m-%d"
-        )
-
-    if time_str is None or time_str == "":
-
+    if not time_str:
         time_str = "10:00"
 
-    parts = str(
-        time_str
-    ).split(":")
+    parts = str(time_str).split(":")
 
     if len(parts) >= 2:
-
         time_short = (
             f"{parts[0].zfill(2)}:"
             f"{parts[1].zfill(2)}"
         )
-
     else:
-
         time_short = "10:00"
 
-    return (
-        f"{date_str}T{time_short}"
-    )
+    return f"{date_str}T{time_short}"
 
 
 # ======================================================
-# HYBRID TRAFFIC PREDICTION
+# GET NUMBER OF ROADS
+# ======================================================
+
+def get_number_of_roads():
+
+    try:
+        df = pd.read_csv(EDGE_FILE)
+
+        if len(df) > 0:
+            return len(df)
+
+    except Exception as e:
+        print("Could not read edge file:", e)
+
+    # Fallback if CSV cannot be read
+    return 50
+
+
+# ======================================================
+# LIGHTWEIGHT TRAFFIC PREDICTION
+#
+# This replaces live GAT-LSTM inference on the
+# low-memory Render deployment.
+#
+# Results are deterministic for the same:
+# date + time + scenario
+# ======================================================
+
+def generate_demo_predictions(
+    date,
+    time,
+    scenario
+):
+
+    timestamp = make_timestamp(
+        date,
+        time
+    )
+
+    number_of_roads = get_number_of_roads()
+
+    # Create deterministic seed
+    seed_text = (
+        f"{timestamp}-{scenario}"
+    )
+
+    seed_hash = hashlib.sha256(
+        seed_text.encode()
+    ).hexdigest()
+
+    seed = int(
+        seed_hash[:8],
+        16
+    )
+
+    rng = np.random.default_rng(seed)
+
+
+    # ----------------------------------------------
+    # Base traffic speed
+    # ----------------------------------------------
+
+    base_speed = 27.0
+
+
+    # ----------------------------------------------
+    # Time influence
+    # ----------------------------------------------
+
+    try:
+        hour = int(
+            str(time).split(":")[0]
+        )
+
+    except Exception:
+        hour = 10
+
+
+    # Morning rush hour
+    if 7 <= hour <= 10:
+        base_speed -= 7
+
+    # Evening rush hour
+    elif 16 <= hour <= 20:
+        base_speed -= 9
+
+    # Late night
+    elif hour >= 22 or hour <= 5:
+        base_speed += 8
+
+
+    # ----------------------------------------------
+    # Scenario influence
+    # ----------------------------------------------
+
+    scenario_lower = str(
+        scenario
+    ).lower()
+
+
+    if scenario_lower == "accident":
+
+        base_speed -= 10
+
+
+    elif scenario_lower in [
+        "rain",
+        "rainy"
+    ]:
+
+        base_speed -= 6
+
+
+    elif scenario_lower in [
+        "heavy",
+        "heavy traffic",
+        "congestion"
+    ]:
+
+        base_speed -= 9
+
+
+    elif scenario_lower in [
+        "clear",
+        "light"
+    ]:
+
+        base_speed += 4
+
+
+    # ----------------------------------------------
+    # Generate road-level variation
+    # ----------------------------------------------
+
+    road_variation = rng.normal(
+        loc=0,
+        scale=5,
+        size=number_of_roads
+    )
+
+
+    predictions = (
+        base_speed
+        +
+        road_variation
+    )
+
+
+    # Keep realistic speed range
+    predictions = np.clip(
+        predictions,
+        5,
+        55
+    )
+
+
+    return predictions
+
+
+# ======================================================
+# HYBRID PREDICTION API
+#
+# API name remains unchanged so your frontend
+# does not need modification.
 # ======================================================
 
 @app.route(
@@ -214,16 +262,11 @@ def hybrid_predict():
     global last_hybrid_prediction
     global last_hybrid_meta
 
-    if hybrid_model is None:
-
-        return jsonify({
-            "error":
-            "Hybrid model not loaded on server."
-        }), 500
-
     try:
 
-        data = request.json or {}
+        data = request.get_json(
+            silent=True
+        ) or {}
 
         date = data.get(
             "date"
@@ -239,40 +282,26 @@ def hybrid_predict():
             "normal"
         )
 
+
         timestamp = make_timestamp(
             date,
             time
         )
 
-        sequence = generate_traffic_sequence(
-            timestamp,
-            scenario
+
+        predictions = (
+            generate_demo_predictions(
+                date,
+                time,
+                scenario
+            )
         )
 
-        x = torch.tensor(
-            sequence
-        ).unsqueeze(
-            0
-        ).float()
-
-        with torch.inference_mode():
-
-            predictions = hybrid_model(
-                x,
-                EDGE_INDEX
-            )
-
-            predictions = (
-                predictions
-                .detach()
-                .cpu()
-                .numpy()
-                .flatten()
-            )
 
         last_hybrid_prediction = (
             predictions.copy()
         )
+
 
         last_hybrid_meta = {
 
@@ -290,16 +319,17 @@ def hybrid_predict():
 
         }
 
+
         roads = [
 
             f"R{i}"
 
-            for i
-            in range(
+            for i in range(
                 len(predictions)
             )
 
         ]
+
 
         return jsonify({
 
@@ -319,11 +349,20 @@ def hybrid_predict():
             time,
 
             "scenario":
-            scenario
+            scenario,
+
+            "deployment_mode":
+            "lightweight-demo"
 
         })
 
+
     except Exception as e:
+
+        print(
+            "Prediction error:",
+            e
+        )
 
         return jsonify({
 
@@ -335,6 +374,9 @@ def hybrid_predict():
 
 # ======================================================
 # ROUTE RECOMMENDATION
+#
+# Keeps existing /api/ppo_route endpoint for
+# frontend compatibility.
 # ======================================================
 
 @app.route(
@@ -346,18 +388,12 @@ def ppo_route():
     global last_hybrid_prediction
     global last_hybrid_meta
 
-    if hybrid_model is None:
-
-        return jsonify({
-
-            "error":
-            "Hybrid model not loaded on server."
-
-        }), 500
-
     try:
 
-        data = request.json or {}
+        data = request.get_json(
+            silent=True
+        ) or {}
+
 
         if (
             "start" not in data
@@ -372,19 +408,15 @@ def ppo_route():
 
             }), 400
 
+
         start = int(
-            data.get(
-                "start",
-                0
-            )
+            data["start"]
         )
 
         end = int(
-            data.get(
-                "end",
-                0
-            )
+            data["end"]
         )
+
 
         date = data.get(
             "date"
@@ -400,18 +432,17 @@ def ppo_route():
             "normal"
         )
 
+
         timestamp = make_timestamp(
             date,
             time
         )
 
+
         use_predictions = None
 
 
-        # ----------------------------------------------
-        # Reuse previous prediction when possible
-        # ----------------------------------------------
-
+        # Reuse previous prediction
         if (
             last_hybrid_prediction
             is not None
@@ -420,30 +451,18 @@ def ppo_route():
             is not None
         ):
 
-            same_timestamp = (
-
+            if (
                 last_hybrid_meta.get(
                     "timestamp"
                 )
                 ==
                 timestamp
-
-            )
-
-            same_scenario = (
-
+                and
                 last_hybrid_meta.get(
                     "scenario"
                 )
                 ==
                 scenario
-
-            )
-
-            if (
-                same_timestamp
-                and
-                same_scenario
             ):
 
                 use_predictions = (
@@ -451,41 +470,22 @@ def ppo_route():
                 )
 
 
-        # ----------------------------------------------
-        # Generate prediction if required
-        # ----------------------------------------------
-
+        # Generate if prediction not already available
         if use_predictions is None:
 
-            sequence = (
-                generate_traffic_sequence(
-                    timestamp,
+            use_predictions = (
+                generate_demo_predictions(
+                    date,
+                    time,
                     scenario
                 )
             )
 
-            x = torch.tensor(
-                sequence
-            ).unsqueeze(
-                0
-            ).float()
-
-            with torch.inference_mode():
-
-                use_predictions = (
-                    hybrid_model(
-                        x,
-                        EDGE_INDEX
-                    )
-                    .detach()
-                    .cpu()
-                    .numpy()
-                    .flatten()
-                )
 
             last_hybrid_prediction = (
                 use_predictions.copy()
             )
+
 
             last_hybrid_meta = {
 
@@ -504,16 +504,12 @@ def ppo_route():
             }
 
 
-        # ----------------------------------------------
-        # Validate range
-        # ----------------------------------------------
-
         number_of_roads = len(
             use_predictions
         )
 
-        if (
 
+        if (
             start < 0
             or
             end < 0
@@ -521,7 +517,6 @@ def ppo_route():
             start >= number_of_roads
             or
             end >= number_of_roads
-
         ):
 
             return jsonify({
@@ -553,16 +548,6 @@ def ppo_route():
         ]
 
 
-        if subset.size == 0:
-
-            return jsonify({
-
-                "error":
-                "No roads in selected range."
-
-            }), 400
-
-
         best_local_index = int(
             np.argmax(
                 subset
@@ -571,11 +556,9 @@ def ppo_route():
 
 
         best_global_index = (
-
             low
             +
             best_local_index
-
         )
 
 
@@ -588,31 +571,31 @@ def ppo_route():
         )
 
 
+        # Try to get real edge ID
         real_edge_id = None
 
+        try:
 
-        if (
-
-            SEL_EDGES
-            is not None
-            and
-            0
-            <=
-            best_global_index
-            <
-            len(
-                SEL_EDGES
+            df = pd.read_csv(
+                EDGE_FILE
             )
 
-        ):
+            if (
+                best_global_index
+                <
+                len(df)
+            ):
 
-            real_edge_id = (
+                real_edge_id = str(
 
-                SEL_EDGES[
-                    best_global_index
-                ]
+                    df.iloc[
+                        best_global_index
+                    ]["edge_id"]
 
-            )
+                )
+
+        except Exception:
+            pass
 
 
         return jsonify({
@@ -653,6 +636,11 @@ def ppo_route():
 
     except Exception as e:
 
+        print(
+            "Route recommendation error:",
+            e
+        )
+
         return jsonify({
 
             "error":
@@ -683,7 +671,7 @@ def route_map_full():
             return jsonify({
 
                 "error":
-                "Run Hybrid Prediction first"
+                "Run prediction first."
 
             }), 400
 
@@ -693,7 +681,7 @@ def route_map_full():
         )
 
 
-        dataframe = pd.read_csv(
+        df = pd.read_csv(
             EDGE_FILE
         )
 
@@ -710,37 +698,30 @@ def route_map_full():
         )
 
 
+        # ----------------------------------------------
+        # Draw roads
+        # ----------------------------------------------
+
         for i in range(
-            len(speeds)
+            min(
+                len(speeds),
+                len(df)
+            )
         ):
 
-            row = dataframe[
-
-                dataframe[
-                    "edge_id"
-                ]
-                ==
-                (
-                    i + 1
-                )
-
-            ]
+            row = df.iloc[i]
 
 
-            if row.empty:
+            if (
+                "geometry"
+                not in row
+            ):
 
                 continue
 
 
-            row = row.iloc[0]
-
-
             geometry = str(
-
-                row[
-                    "geometry"
-                ]
-
+                row["geometry"]
             )
 
 
@@ -821,9 +802,10 @@ def route_map_full():
                 weight=5,
 
                 tooltip=(
-                    f"Edge R{i} | "
-                    f"Speed: "
+
+                    f"Road R{i} | "
                     f"{speed:.2f} km/h"
+
                 )
 
             ).add_to(
@@ -832,65 +814,50 @@ def route_map_full():
 
 
         # ----------------------------------------------
-        # Highlight best road
+        # Highlight fastest road
         # ----------------------------------------------
 
         best_index = int(
-
             np.argmax(
                 speeds
             )
-
         )
 
 
-        best_row = dataframe[
-
-            dataframe[
-                "edge_id"
-            ]
-            ==
-            (
-                best_index + 1
-            )
-
-        ]
-
-
-        if not best_row.empty:
-
-            best_row = (
-                best_row.iloc[0]
-            )
-
-
-            best_geometry = str(
-
-                best_row[
-                    "geometry"
-                ]
-
-            ).replace(
-
-                "LINESTRING (",
-                ""
-
-            ).replace(
-
-                ")",
-                ""
-
-            )
-
-
-            best_coordinates = []
-
+        if best_index < len(df):
 
             try:
 
+                geometry = str(
+
+                    df.iloc[
+                        best_index
+                    ]["geometry"]
+
+                )
+
+
+                geometry_string = (
+
+                    geometry
+                    .replace(
+                        "LINESTRING (",
+                        ""
+                    )
+                    .replace(
+                        ")",
+                        ""
+                    )
+
+                )
+
+
+                best_coordinates = []
+
+
                 for pair in (
 
-                    best_geometry
+                    geometry_string
                     .split(",")
 
                 ):
@@ -935,12 +902,15 @@ def route_map_full():
                 )
 
 
-            except Exception:
+            except Exception as e:
 
-                pass
+                print(
+                    "Best road map error:",
+                    e
+                )
 
 
-        output_path = os.path.join(
+        map_path = os.path.join(
 
             BASE_DIR,
 
@@ -956,7 +926,7 @@ def route_map_full():
         os.makedirs(
 
             os.path.dirname(
-                output_path
+                map_path
             ),
 
             exist_ok=True
@@ -965,7 +935,7 @@ def route_map_full():
 
 
         traffic_map.save(
-            output_path
+            map_path
         )
 
 
@@ -979,6 +949,11 @@ def route_map_full():
 
     except Exception as e:
 
+        print(
+            "Map generation error:",
+            e
+        )
+
         return jsonify({
 
             "error":
@@ -988,11 +963,10 @@ def route_map_full():
 
 
 # ======================================================
-# YOLO VEHICLE DETECTION
+# YOLO ENDPOINT
 #
-# IMPORTANT:
-# YOLO is loaded ONLY when this API is first called.
-# This reduces startup RAM usage.
+# Disabled on low-memory deployment instead of
+# returning fake detection results.
 # ======================================================
 
 @app.route(
@@ -1001,109 +975,18 @@ def route_map_full():
 )
 def yolo_detect():
 
-    global yolo_model
+    return jsonify({
 
-    try:
+        "error":
+        (
+            "Live vehicle detection is disabled "
+            "on the lightweight deployment."
+        ),
 
-        # Import Ultralytics only when YOLO is actually used.
-        if yolo_model is None:
+        "deployment_mode":
+        "lightweight-demo"
 
-            print(
-                "Loading YOLO model..."
-            )
-
-            from ultralytics import YOLO
-
-            yolo_model = YOLO(
-                YOLO_PATH
-            )
-
-            print(
-                "YOLO model loaded successfully."
-            )
-
-
-        if "image" not in request.files:
-
-            return jsonify({
-
-                "error":
-                "No image uploaded."
-
-            }), 400
-
-
-        uploaded_file = (
-            request.files[
-                "image"
-            ]
-        )
-
-
-        save_path = os.path.join(
-
-            BASE_DIR,
-
-            "static",
-
-            "uploads",
-
-            uploaded_file.filename
-
-        )
-
-
-        os.makedirs(
-
-            os.path.dirname(
-                save_path
-            ),
-
-            exist_ok=True
-
-        )
-
-
-        uploaded_file.save(
-            save_path
-        )
-
-
-        results = (
-
-            yolo_model(
-                save_path
-            )[0]
-
-        )
-
-
-        vehicle_count = len(
-            results.boxes
-        )
-
-
-        return jsonify({
-
-            "vehicle_count":
-            int(
-                vehicle_count
-            ),
-
-            "filename":
-            uploaded_file.filename
-
-        })
-
-
-    except Exception as e:
-
-        return jsonify({
-
-            "error":
-            str(e)
-
-        }), 500
+    }), 503
 
 
 # ======================================================
@@ -1118,7 +1001,10 @@ def route_map():
 
     try:
 
-        data = request.json or {}
+        data = request.get_json(
+            silent=True
+        ) or {}
+
 
         start = data[
             "start"
@@ -1142,11 +1028,7 @@ def route_map():
 
             start,
 
-            popup="Start",
-
-            icon=folium.Icon(
-                color="green"
-            )
+            popup="Start"
 
         ).add_to(
             route_map_object
@@ -1157,11 +1039,7 @@ def route_map():
 
             end,
 
-            popup="End",
-
-            icon=folium.Icon(
-                color="red"
-            )
+            popup="End"
 
         ).add_to(
             route_map_object
@@ -1173,9 +1051,7 @@ def route_map():
             [
                 start,
                 end
-            ],
-
-            color="blue"
+            ]
 
         ).add_to(
             route_map_object
@@ -1230,7 +1106,7 @@ def route_map():
 
 
 # ======================================================
-# RUN LOCALLY
+# RUN
 # ======================================================
 
 if __name__ == "__main__":
@@ -1241,6 +1117,7 @@ if __name__ == "__main__":
             5000
         )
     )
+
 
     app.run(
 
